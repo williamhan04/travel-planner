@@ -1,0 +1,40 @@
+/* Centering elements */
+.flight-card {
+    border-radius: 10px;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  
+  .flight-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Centering pagination */
+  .pagination {
+    justify-content: center;
+  }
+  
+  /* Styling for Modal */
+  .flight-modal .modal-header {
+    border-bottom: none;
+  }
+  
+  .flight-modal .modal-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+  
+  .flight-modal .modal-body h5 {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+  }
+  
+  .flight-modal .modal-body p {
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  
+  .flight-modal .modal-footer {
+    border-top: none;
+  }
+  
