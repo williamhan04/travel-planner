@@ -1,19 +1,14 @@
 {
-    "compilerOptions": {
-      "outDir": "./dist",      // Output directory for compiled JS (you can specify separate folders if needed)
-      "module": "commonjs",    // Use CommonJS for compatibility with Node.js
-      "target": "es6",         // ECMAScript target version
-      "jsx": "react",
-      "strict": true,          // Enable strict type checking
-      "esModuleInterop": true, // Enable interoperability between CommonJS and ES modules
-      "skipLibCheck": true
-    },
-    "include": [
-      "*.ts",            // Include all .ts files in the root directory (backend)
-      "frontend/**/*.ts" // Include all .ts files in the frontend folder
-    ],
-    "exclude": [
-      "node_modules"     // Exclude node_modules directory
-    ]
-  }
-  
+  "compilerOptions": {
+    "target": "ES6",
+    "module": "commonjs",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
+}
