@@ -33,7 +33,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
   const fetchOriginSuggestions = async (value: string) => {
     if (value.length < 1) return;
     try {
-      const response = await axios.get('http:/localhost:5000/api/airports/suggest', {
+      const response = await axios.get('http://localhost:5000/api/airports/suggest', {
         params: { keyword: value },
       });
       const airportSuggestions = response.data.data.map((airport: any) => ({
@@ -112,7 +112,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
               <Form.Label>Origin</Form.Label>
               <Autosuggest
               suggestions={originSuggestions}
-              onSuggestionsFetchRequested={({ value }: { value: string }) => fetchOriginSuggestions(value)}
+              onSuggestionsFetchRequested={({ value }) => fetchOriginSuggestions(value)}
               onSuggestionsClearRequested={() => setOriginSuggestions([])}
               getSuggestionValue={getSuggestionValue}
               renderSuggestion={renderSuggestion}

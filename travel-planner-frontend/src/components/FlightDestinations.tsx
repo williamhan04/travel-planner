@@ -1,17 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Pagination, Button, Modal, Form } from 'react-bootstrap';
-import './FlightDestinations.css';
-import { Flight } from './types'; 
+import './../../src/FlightDestinations.css';
+import { FlightOffer } from './../../../shared/types'; 
 
 interface FlightDestinationsProps {
-  flights: Flight[];
+  flights: FlightOffer[];
 }
+// Helper function to convert ISO 8601 duration into readable format
+const convertDuration = (isoDuration: string): string => {
+  const durationRegex = /PT(\d+H)?(\d+M)?/;
+  const matches = isoDuration.match(durationRegex);
+
+  if (!matches) {
+    return "Invalid duration";
+  }
+
+  const hours = matches[1] ? parseInt(matches[1].replace('H', ''), 10) : 0;
+  const minutes = matches[2] ? parseInt(matches[2].replace('M', ''), 10) : 0;
+
+  let readableDuration = '';
+
+  if (hours) {
+    readableDuration += `${hours} hour${hours > 1 ? 's' : ''} `;
+  }
+
+  if (minutes) {
+    readableDuration += `${minutes} minute${minutes > 1 ? 's' : ''}`;
+  }
+
+  return readableDuration.trim();
+};
 
 const FlightDestinations: React.FC<FlightDestinationsProps> = ({ flights }) => {
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
+  const [selectedFlight, setSelectedFlight] = useState<FlightOffer | null>(null);
   const [showModal, setShowModal] = useState<boolean>(false);
-  const [sortedFlights, setSortedFlights] = useState<Flight[]>([]); // Initialize as empty array
+  const [sortedFlights, setSortedFlights] = useState<FlightOffer[]>([]); // Initialize as empty array
   const [sortType, setSortType] = useState<string>('priceAsc');
 
   const flightsPerPage = 6;
@@ -26,7 +50,7 @@ const FlightDestinations: React.FC<FlightDestinationsProps> = ({ flights }) => {
 
   const handlePageChange = (pageNumber: number) => setCurrentPage(pageNumber);
 
-  const handleViewDetails = (flight: Flight) => {
+  const handleViewDetails = (flight: FlightOffer) => {
     setSelectedFlight(flight);
     setShowModal(true);
   };
@@ -35,7 +59,7 @@ const FlightDestinations: React.FC<FlightDestinationsProps> = ({ flights }) => {
     setSelectedFlight(null);
     setShowModal(false);
   };
-
+ 
   const sortFlights = () => {
     let sortedArray = [...flights];
     if (sortType === 'priceAsc') {
@@ -92,7 +116,7 @@ const FlightDestinations: React.FC<FlightDestinationsProps> = ({ flights }) => {
                         <strong className="text-muted">Price:</strong> <span className="text-success">{price} EUR</span><br />
                         <strong className="text-muted">Departure:</strong> {new Date(departure.at).toLocaleString()}<br />
                         <strong className="text-muted">Arrival:</strong> {new Date(arrival.at).toLocaleString()}<br />
-                        <strong className="text-muted">Duration:</strong> {itinerary.duration}
+                        <strong className="text-muted">Duration:</strong> {convertDuration(itinerary.duration)}
                       </Card.Text>
                       <Button variant="info" onClick={() => handleViewDetails(flight)}>
                         View Details

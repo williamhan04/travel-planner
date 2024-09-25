@@ -1,22 +1,20 @@
 import React, { useState } from 'react';
-import SearchForm from './SearchForm';
-import FlightDestinations from './FlightDestinations';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import Login from './components/auth/Login';
+import Signup from './components/auth/Signup';
+import Dashboard from './components/Dashboard';
+import PrivateRoute from './components/PrivateRoute';
+import SearchForm from './components/SearchForm';
+import FlightDestinations from './components/FlightDestinations';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import axios from 'axios';
-import { Flight } from './types';
-
-// Define types for search parameters
-interface SearchParams {
-  origin: string;
-  destination: string;
-  departureDate: string;
-}
+import { FlightOffer, SearchParams } from './../../shared/types';
 
 function App() {
   // State management for search parameters, flight data, loading, and error
   const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
-  const [flights, setFlights] = useState<Flight[]>([]);
+  const [flights, setFlights] = useState<FlightOffer[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,16 +25,16 @@ function App() {
       setError(null);
 
       // Make the API call to the backend to fetch flight data
-      const response = await axios.get<{ data: Flight[] }>('http://localhost:5000/api/flights/search', {
+      const response = await axios.get<{ data: FlightOffer[] }>('http://localhost:5000/api/flights/search', {
         params: {
           origin: params.origin,
           destination: params.destination,
-          departureDate: params.departureDate
-        }
+          departureDate: params.departureDate,
+        },
       });
 
       // Set the flight data from the response
-      setFlights(response.data.data); // Assuming your API returns flight data in `data.data`
+      setFlights(response.data.data);
       setSearchParams(params); // Store the search params for further use if needed
       toast.success('Flights fetched successfully!');
     } catch (err) {
@@ -47,27 +45,51 @@ function App() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    window.location.href = 'login';
+  };
+
   return (
-    <div className="App">
-      {/* Toast notification container for success/error messages */}
-      <ToastContainer />
-      <h1 className="text-center my-4">Flight Planner</h1>
+    <Router>
+      <div className="container mt-5">
+        <ToastContainer />
+        <h1 className="text-center mb-4">Flight Planner</h1>
 
-      {/* Flight search form */}
-      <SearchForm onSearch={handleSearch} />
+        {/* Navigation Links */}
+        <nav className="mb-4">
+          <a href="/login" className="btn btn-primary me-2">Login</a>
+          <a href="/signup" className="btn btn-primary me-2">Signup</a>
+          <a href="/" className="btn btn-primary me-2">Home</a>
+          <a href="/dashboard" className="btn btn-primary me-2">Dashboard</a>
+          <button className="btn btn-danger" onClick={handleLogout}>Logout</button>
+        </nav>
 
-      {/* Display loading state */}
-      {loading && <p>Loading flights...</p>}
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
 
-      {/* Display error message */}
-      {error && <p className="text-danger">{error}</p>}
+          {/* Protected route for Dashboard */}
+          <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
 
-      {/* Show flight destinations if flights are fetched and no error/loading */}
-      {searchParams && !loading && !error && flights.length > 0 && <FlightDestinations flights={flights} />}
+          {/* Default route for search form */}
+          <Route
+            path="/"
+            element={
+              <>
+                <SearchForm onSearch={handleSearch} />
 
-      {/* If no flights are found, show a message */}
-      {searchParams && !loading && !error && flights.length === 0 && <p>No flights found for your search criteria.</p>}
-    </div>
+                {loading && <p>Loading flights...</p>}
+                {error && <p className="text-danger">{error}</p>}
+
+                {searchParams && !loading && !error && flights.length > 0 && <FlightDestinations flights={flights} />}
+                {searchParams && !loading && !error && flights.length === 0 && <p>No flights found for your search criteria.</p>}
+              </>
+            }
+          />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 
