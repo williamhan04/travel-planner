@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Pagination, Button, Modal, Form } from 'react-bootstrap';
 import './../../src/FlightDestinations.css';
 import { FlightOffer } from './../../../shared/types'; 
+import axios from 'axios';
 
 interface FlightDestinationsProps {
   flights: FlightOffer[];
@@ -37,12 +38,28 @@ const FlightDestinations: React.FC<FlightDestinationsProps> = ({ flights }) => {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [sortedFlights, setSortedFlights] = useState<FlightOffer[]>([]); // Initialize as empty array
   const [sortType, setSortType] = useState<string>('priceAsc');
+  const [currency, setCurrency] = useState<string>('USD');
 
   const flightsPerPage = 6;
   const indexOfLastFlight = currentPage * flightsPerPage;
   const indexOfFirstFlight = indexOfLastFlight - flightsPerPage;
   const currentFlights = sortedFlights.slice(indexOfFirstFlight, indexOfLastFlight);
   const totalPages = Math.ceil(sortedFlights.length / flightsPerPage);
+
+  useEffect(() => {
+    // Fetch user location and determine currency
+    const fetchLocationAndSetCurrency = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/currency-by-location');
+        console.log('Currency fetched from backend:', response.data.currency);
+        setCurrency(response.data.currency);
+      } catch (error) {
+        console.error('Error fetching currency by location', error);
+      }
+    };
+
+    fetchLocationAndSetCurrency();
+  });
 
   useEffect(() => {
     sortFlights(); // Sort flights whenever flights data or sortType changes
@@ -113,7 +130,7 @@ const FlightDestinations: React.FC<FlightDestinationsProps> = ({ flights }) => {
                         {departure.iataCode} → {arrival.iataCode}
                       </Card.Title>
                       <Card.Text>
-                        <strong className="text-muted">Price:</strong> <span className="text-success">{price} EUR</span><br />
+                        <strong className="text-muted">Price:</strong> <span className="text-success">{price} {currency} </span><br />
                         <strong className="text-muted">Departure:</strong> {new Date(departure.at).toLocaleString()}<br />
                         <strong className="text-muted">Arrival:</strong> {new Date(arrival.at).toLocaleString()}<br />
                         <strong className="text-muted">Duration:</strong> {convertDuration(itinerary.duration)}

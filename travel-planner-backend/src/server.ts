@@ -7,7 +7,10 @@ import { User } from "./entity/User";
 import * as dotenv from 'dotenv';
 import bcrypt from 'bcrypt'; // Import bcrypt for password hashing
 import jwt from 'jsonwebtoken'; // Import jsonwebtoken for JWT
-import { FlightOffersResponse, AirportSuggestionsResponse } from './../../shared/types';
+import { FlightOffersResponse, AirportSuggestionsResponse, CountryCurrencyMapping } from './../../shared/types';
+import fs from 'fs';
+import path from 'path';
+import csv from 'csv-parser';
 
 dotenv.config(); // Load .env variables
 
@@ -21,6 +24,75 @@ app.use(cors());
 const AMADEUS_API_KEY = process.env.AMADEUS_API_KEY as string;
 const AMADEUS_API_SECRET = process.env.AMADEUS_API_SECRET as string;
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret'; // Set a JWT secret from .env or default
+
+// Map countries to currencies
+const countryCurrencyMap: Record<string, string> = {};
+
+// Load and parse the CSV file at startup
+const loadCountryCurrencyMapping = () => {
+  const filePath = path.join(__dirname, '..' , 'country-code-to-currency-code-mapping.csv');
+
+  fs.createReadStream(filePath)
+    .pipe(csv())
+    .on('data', (row: CountryCurrencyMapping) => {
+      countryCurrencyMap[row.CountryCode] = row.Code;
+    })
+    .on('end', () => {
+      console.log('CSV file successfully processed');
+    })
+    .on('error', (err) => {
+      console.error('Error reading CSV file:', err);
+    });
+};
+
+// Call the load function when the server starts
+loadCountryCurrencyMapping();
+
+app.set('trust proxy', true); // Trust the 'X-Forwarded-For' header
+
+// Route to detect user location by IP and return currency
+app.get('/api/currency-by-location', async (req: Request, res: Response) => {
+  try {
+    let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
+    if (typeof ip === 'string') {
+      ip = ip.replace(/^::ffff:/, ''); // Remove the IPv4-mapped prefix if present
+    }
+    
+    // Handle the case where x-forwarded-for may contain multiple IPs (comma-separated)
+    if (typeof ip === 'string' && ip.includes(',')) {
+      ip = ip.split(',')[0].trim(); // Take the first IP, which is the client’s real IP
+    }
+    // If the IP is local (like '::1' for IPv6 localhost or '127.0.0.1' for IPv4), use a public IP for testing
+    if (ip === '::1' || ip === '127.0.0.1') {
+      ip = '8.8.8.8'; // Use a public IP like Google's DNS for testing purposes
+    }
+    console.log(`IP Address being sent to IPInfo: ${ip}`); 
+
+    const IPINFO_TOKEN = process.env.IPINFO_TOKEN;
+    
+    if (!IPINFO_TOKEN) {
+      throw new Error('IPInfo token is missing from environment variables.');
+    }
+
+    // Use IP geolocation API to get user's country
+    const geoResponse = await axios.get(`https://ipinfo.io/${ip}?token=${IPINFO_TOKEN}`);
+
+    console.log('GeoResponse:', geoResponse.data);
+
+    const { country } = (geoResponse.data as {country: string});
+    console.log('Country code:', country);
+
+    // Get currency from the mapping
+    const currencyCode = countryCurrencyMap[country] || 'USD'
+    console.log('Currency Code:', currencyCode);
+
+    res.json({ currency: currencyCode });
+  } catch (error) {
+    console.error('Error fetching currency by location', error);
+    res.status(500).json({ error: 'Error fetching currency' });
+  }
+});
 
 // Set up a new DataSource instance for database connection
 const AppDataSource = new DataSource({

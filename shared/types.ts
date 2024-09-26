@@ -11,6 +11,12 @@ export interface FlightSegment {
   carrierCode: string;
   number: string;
 }
+export interface CountryCurrencyMapping {
+  Country: string;
+  CountryCode: string;
+  Currency: string;
+  Code: string;
+}
 
 // Define the itinerary structure, including segments and total duration
 export interface Itinerary {
@@ -21,7 +27,7 @@ export interface Itinerary {
 // Price structure, including the total and currency
 export interface Price {
   total: string;
-  currency?: string;  // Optional, in case some price objects don't include currency
+  currency: string; 
 }
 
 // Pricing options structure, including fare type and baggage options
