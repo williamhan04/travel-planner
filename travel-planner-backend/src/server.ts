@@ -7,8 +7,8 @@ import { User } from "./entity/User";
 import * as dotenv from 'dotenv';
 import bcrypt from 'bcrypt'; // Import bcrypt for password hashing
 import jwt from 'jsonwebtoken'; // Import jsonwebtoken for JWT
-import { FlightOffersResponse, AirportSuggestionsResponse, CountryCurrencyMapping } from './../../shared/types';
-import fs from 'fs';
+import { FlightOffer, RoundTripOffer, FlightOffersResponse, AirportSuggestionsResponse, CountryCurrencyMapping, FlightDestination, UnifiedFlight } from './../../shared/types';
+import fs, { access } from 'fs';
 import path from 'path';
 import csv from 'csv-parser';
 
@@ -171,41 +171,95 @@ AppDataSource.initialize()
   })
   .catch((error) => console.log("Error initializing database connection:", error));
 
-// Amadeus API and Flight Search Routes 
-app.get('/api/flights/search', async (req: Request, res: Response) => {
-  const { origin, destination, departureDate } = req.query;
-
-  if (!origin || !destination || !departureDate) {
-    return res.status(400).json({ error: 'Missing required query parameters: origin, destination, and departureDate' });
-  }
-
-  try {
-    const accessToken = await getAccessToken();
-
-    const params = {
-      originLocationCode: origin as string,
-      destinationLocationCode: destination as string,
-      departureDate: departureDate as string,
-      adults: 1,
+  app.get('/api/flights/search', async (req: Request, res: Response) => {
+    const { origin, destination, departureDate, returnDate = undefined } = req.query as {
+      origin?: string;
+      destination?: string;
+      departureDate?: string;
+      returnDate?: string;
     };
-
-    const response = await axios.get<FlightOffersResponse>('https://test.api.amadeus.com/v2/shopping/flight-offers', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      params,
-    });
-
-    if (!response.data || response.data.data.length === 0) {
-      return res.status(404).json({ error: 'No flights found for the given criteria' });
+  
+    // Ensure required parameters are provided
+    if (!origin || !destination || !departureDate) {
+      return res.status(400).json({ error: 'Missing required query parameters: origin, destination, and departureDate' });
     }
+  
+    try {
+      const accessToken = await getAccessToken();
+  
+      // Step 1: Fetch one-way flight offers for the outbound flight
+      const outboundParams = {
+        originLocationCode: origin,
+        destinationLocationCode: destination,
+        departureDate,
+        adults: 1, // You can adjust this as needed
+      };
+  
+      const outboundResponse = await axios.get<FlightOffersResponse>(
+        'https://test.api.amadeus.com/v2/shopping/flight-offers', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          params: outboundParams,
+        }
+      );
+  
+      if (!outboundResponse.data?.data?.length) {
+        return res.status(404).json({ error: 'No outbound flights found for the given criteria' });
+      }
+  
+      let mergedFlightData: UnifiedFlight[] = [];
+  
+      // Step 2: Fetch return flight destinations if a return date is provided
+      if (returnDate) {
+        const returnParams = {
+          origin: destination,
+          departureDate: returnDate,
+        };
+  
+        const returnResponse = await axios.get<{ data: FlightDestination[] }>(
+          'https://test.api.amadeus.com/v1/shopping/flight-destinations', {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            params: returnParams,
+          }
+        );
+  
+        if (!returnResponse.data?.data?.length) {
+          return res.status(404).json({ error: 'No return destinations found for the given criteria' });
+        }
+  
+        // Merging outbound and return details into a unified response format
+        mergedFlightData = outboundResponse.data.data.map((flightOffer) => {
+          const returnOption = returnResponse.data.data.find((ret: FlightDestination) =>
+            ret.destination === flightOffer.itineraries[0].segments[0].departure.iataCode
+          );
+  
+          return {
+            type: 'roundtrip-offer',
+            outbound: flightOffer, // Use the entire `FlightOffer` object here
+            return: returnOption || null,
+          } as RoundTripOffer;
+        });
+  
+      } else {
+        // If no return date is provided, just return the outbound flights as one-way offers
+        mergedFlightData = outboundResponse.data.data.map((flightOffer) => ({
+          ...flightOffer,
+          type: 'oneway-offer',
+          links: {
+            flightDates: '', // Placeholder links, you can add actual links if available
+            flightOffers: '', // Placeholder links, you can add actual links if available
+          }
+        }));
+      }
+  
+      res.json({ data: mergedFlightData });
+    } catch (error: any) {
+      console.error('Error fetching flight data:', error.response ? error.response.data : error.message);
+      res.status(500).json({ error: 'Error fetching flight data' });
+    }
+  });
+  
 
-    res.json(response.data);
-  } catch (error: any) {
-    console.error('Error fetching flight data:', error.response ? error.response.data : error.message);
-    res.status(500).json({ error: 'Error fetching flight data' });
-  }
-});
-
-// Airport suggestions route (unchanged)
+// Airport suggestions route
 app.get('/api/airports/suggest', async (req: Request, res: Response) => {
   const { keyword } = req.query;
 
