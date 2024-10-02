@@ -7,7 +7,7 @@ import { User } from "./entity/User";
 import * as dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { FlightOffer, FlightOffersResponse, AirportSuggestionsResponse, CountryCurrencyMapping } from './../../shared/types';
+import { FlightOffersResponse, AirportSuggestionsResponse, CountryCurrencyMapping } from './../../shared/types';
 import fs from 'fs';
 import path from 'path';
 import csv from 'csv-parser';
@@ -23,7 +23,7 @@ app.use(cors());
 // Amadeus API Credentials from .env
 const AMADEUS_API_KEY = process.env.AMADEUS_API_KEY as string;
 const AMADEUS_API_SECRET = process.env.AMADEUS_API_SECRET as string;
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret'; // Set a JWT secret from .env or default
+const JWT_SECRET = process.env.JWT_SECRET ?? 'your_jwt_secret'; // Set a JWT secret from .env or default
 
 let cachedAccessToken: string | null = null;
 let tokenExpiryTime: number | null = null;
@@ -137,7 +137,7 @@ app.get('/api/currency-by-location', async (req: Request, res: Response) => {
 const AppDataSource = new DataSource({
   type: 'postgres',
   host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT || '5432'),
+  port: parseInt(process.env.DB_PORT ?? '5432'),
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
@@ -150,7 +150,7 @@ const AppDataSource = new DataSource({
 AppDataSource.initialize()
   .then(() => {
     // Start the server after successful connection
-    const PORT = process.env.PORT || 5000;
+    const PORT = process.env.PORT ?? 5000;
     app.listen(PORT, () => {
       console.log(`Server is running on http://localhost:${PORT}`);
     });

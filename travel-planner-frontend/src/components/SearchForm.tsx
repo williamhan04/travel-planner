@@ -108,12 +108,12 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
 
 
   return (
-    <Container className="mt-5">
+    <Container className="mt-5 p-6 rounded-lg shadow-md bg-gray-50 max-w-2xl mx-auto">
       <Form onSubmit={handleSubmit}>
-        <Row>
+        <Row className="mb-4">
           <Col md={4}>
             <Form.Group controlId="formOrigin">
-              <Form.Label>Origin</Form.Label>
+              <Form.Label className="text-lg font-semibold">Origin</Form.Label>
               <Autosuggest
               suggestions={originSuggestions}
               onSuggestionsFetchRequested={({ value }) => fetchOriginSuggestions(value)}
@@ -204,7 +204,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
 
         <Row className="mt-3">
           <Col>
-            <Button variant="primary" type="submit">
+            <Button variant="primary" type="submit" className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg">
               Search Flights
             </Button>
             <Button variant="secondary" onClick={handleClear} className="ml-2">
