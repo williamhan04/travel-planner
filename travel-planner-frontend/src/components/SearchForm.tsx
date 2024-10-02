@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Form, Button, Container, Row, Col, Alert } from 'react-bootstrap';
 import Autosuggest from 'react-autosuggest';
 import axios from 'axios';
+import { SearchParams } from './../../../shared/types'
 
 // Define types for props and state
 interface SearchFormProps {
-  onSearch: (params: { origin: string; destination: string; departureDate: string }) => void;
+  onSearch: (params: SearchParams ) => void;
 }
 
 interface AirportSuggestion {
@@ -17,12 +18,15 @@ interface FormErrors {
   origin?: string;
   destination?: string;
   departureDate?: string;
+  returnDate?: string;
 }
 
 const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
   const [origin, setOrigin] = useState<string>('');
   const [destination, setDestination] = useState<string>('');
   const [departureDate, setDepartureDate] = useState<string>('');
+  const [tripType, setTripType] = useState<'oneway' | 'roundtrip'>('oneway');
+  const [returnDate, setReturnDate] = useState<string>('');
   const [errors, setErrors] = useState<FormErrors>({});
   const [originSuggestions, setOriginSuggestions] = useState<AirportSuggestion[]>([]);
   const [destinationSuggestions, setDestinationSuggestions] = useState<AirportSuggestion[]>([]);
@@ -87,7 +91,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
 
     if (Object.keys(formErrors).length === 0) {
       setErrors({});
-      onSearch({ origin, destination, departureDate });
+      onSearch({ origin, destination, departureDate, tripType, returnDate });
     } else {
       setErrors(formErrors);
     }
@@ -148,6 +152,22 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
             </Form.Group>
           </Col>
         </Row>
+        
+        <Row className="mt-3">
+          <Col md={4}>
+            <Form.Group controlId="formTripType">
+              <Form.Label>Trip Type</Form.Label>
+              <Form.Control
+                as="select"
+                value={tripType}
+                onChange={(e) => setTripType(e.target.value as "oneway" | "roundtrip")}
+                >
+                  <option value="oneway">One Way</option>
+                  <option value="roundtrip">Round-trip</option>
+                </Form.Control>
+              </Form.Group>
+              </Col>
+        </Row>
 
         <Row className="mt-3">
           <Col md={4}>
@@ -164,6 +184,23 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
             </Form.Group>
           </Col>
         </Row>
+
+        {tripType === 'roundtrip' && (
+          <Row className="mt-3">
+            <Col md={4}>
+              <Form.Group controlId="formReturnDate">
+                <Form.Label>Return Date</Form.Label>
+                <Form.Control
+                  type="date"
+                  value={returnDate}
+                  min={departureDate}
+                  onChange={(e) => setReturnDate(e.target.value)}
+                />
+                {errors.returnDate && <Alert variant="danger">{errors.returnDate}</Alert>}
+              </Form.Group>
+            </Col>
+          </Row>
+        )}
 
         <Row className="mt-3">
           <Col>

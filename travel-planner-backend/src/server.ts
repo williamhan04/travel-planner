@@ -5,9 +5,9 @@ import axios from 'axios';
 import cors from 'cors';
 import { User } from "./entity/User";
 import * as dotenv from 'dotenv';
-import bcrypt from 'bcrypt'; // Import bcrypt for password hashing
-import jwt from 'jsonwebtoken'; // Import jsonwebtoken for JWT
-import { FlightOffersResponse, AirportSuggestionsResponse, CountryCurrencyMapping } from './../../shared/types';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { FlightOffer, FlightOffersResponse, AirportSuggestionsResponse, CountryCurrencyMapping } from './../../shared/types';
 import fs from 'fs';
 import path from 'path';
 import csv from 'csv-parser';
@@ -25,12 +25,50 @@ const AMADEUS_API_KEY = process.env.AMADEUS_API_KEY as string;
 const AMADEUS_API_SECRET = process.env.AMADEUS_API_SECRET as string;
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret'; // Set a JWT secret from .env or default
 
+let cachedAccessToken: string | null = null;
+let tokenExpiryTime: number | null = null;
+
+async function getAccessToken(): Promise<string> {
+  if (cachedAccessToken && tokenExpiryTime && Date.now() < tokenExpiryTime) {
+    // Return the cached token if it's still valid
+    return cachedAccessToken;
+  }
+
+  try {
+    const params = new URLSearchParams({
+      grant_type: 'client_credentials',
+      client_id: AMADEUS_API_KEY,
+      client_secret: AMADEUS_API_SECRET,
+    });
+
+    console.log('AMADEUS_API_KEY:', AMADEUS_API_KEY);
+    console.log('AMADEUS_API_SECRET:', AMADEUS_API_SECRET);
+
+    const response = await axios.post<{ access_token: string, expires_in: number }>(
+      'https://test.api.amadeus.com/v1/security/oauth2/token',
+      params.toString(), {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      }
+    );
+
+    cachedAccessToken = response.data.access_token;
+    tokenExpiryTime = Date.now() + response.data.expires_in * 1000; // Set token expiry time
+
+    return cachedAccessToken;
+  } catch (error: any) {
+    console.error('Error fetching access token:', error.response ? error.response.data : error.message);
+    throw new Error('Unable to get access token');
+  }
+}
+
 // Map countries to currencies
 const countryCurrencyMap: Record<string, string> = {};
 
 // Load and parse the CSV file at startup
 const loadCountryCurrencyMapping = () => {
-  const filePath = path.join(__dirname, '..' , 'country-code-to-currency-code-mapping.csv');
+  const filePath = path.join(__dirname, '..', 'country-code-to-currency-code-mapping.csv');
 
   fs.createReadStream(filePath)
     .pipe(csv())
@@ -58,19 +96,20 @@ app.get('/api/currency-by-location', async (req: Request, res: Response) => {
     if (typeof ip === 'string') {
       ip = ip.replace(/^::ffff:/, ''); // Remove the IPv4-mapped prefix if present
     }
-    
+
     // Handle the case where x-forwarded-for may contain multiple IPs (comma-separated)
     if (typeof ip === 'string' && ip.includes(',')) {
       ip = ip.split(',')[0].trim(); // Take the first IP, which is the client’s real IP
     }
+
     // If the IP is local (like '::1' for IPv6 localhost or '127.0.0.1' for IPv4), use a public IP for testing
     if (ip === '::1' || ip === '127.0.0.1') {
       ip = '8.8.8.8'; // Use a public IP like Google's DNS for testing purposes
     }
-    console.log(`IP Address being sent to IPInfo: ${ip}`); 
+    console.log(`IP Address being sent to IPInfo: ${ip}`);
 
     const IPINFO_TOKEN = process.env.IPINFO_TOKEN;
-    
+
     if (!IPINFO_TOKEN) {
       throw new Error('IPInfo token is missing from environment variables.');
     }
@@ -80,11 +119,11 @@ app.get('/api/currency-by-location', async (req: Request, res: Response) => {
 
     console.log('GeoResponse:', geoResponse.data);
 
-    const { country } = (geoResponse.data as {country: string});
+    const { country } = geoResponse.data as { country: string };
     console.log('Country code:', country);
 
     // Get currency from the mapping
-    const currencyCode = countryCurrencyMap[country] || 'USD'
+    const currencyCode = countryCurrencyMap[country] || 'USD';
     console.log('Currency Code:', currencyCode);
 
     res.json({ currency: currencyCode });
@@ -109,60 +148,7 @@ const AppDataSource = new DataSource({
 
 // Initialize the DataSource
 AppDataSource.initialize()
-  .then(async () => {
-    const userRepository = AppDataSource.getRepository(User);
-
-    // Route to create a new user (Signup)
-    app.post('/signup', async (req: Request, res: Response) => {
-      const { name, email, password } = req.body;
-      try {
-        // Hash the password before storing it in the database
-        const hashedPassword = await bcrypt.hash(password, 10);
-        
-        // Create a new user instance with hashed password
-        const newUser = userRepository.create({ name, email, password: hashedPassword });
-        await userRepository.save(newUser);
-        
-        // Generate JWT token after successful signup
-        const token = jwt.sign({ userId: newUser.id }, JWT_SECRET);
-        res.json({ token });
-      } catch (error) {
-        console.error('Error during signup:', error);
-        res.status(500).json({ message: 'Error during signup' });
-      }
-    });
-
-    // Route for user login
-    app.post('/login', async (req: Request, res: Response) => {
-      const { email, password } = req.body;
-      try {
-        // Find the user by email
-        const user = await userRepository.findOneBy({ email });
-        if (!user) {
-          return res.status(400).json({ message: 'Invalid credentials' });
-        }
-
-        // Compare the provided password with the stored hashed password
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-          return res.status(400).json({ message: 'Invalid credentials' });
-        }
-
-        // Generate JWT token if login is successful
-        const token = jwt.sign({ userId: user.id }, JWT_SECRET);
-        res.json({ token });
-      } catch (error) {
-        console.error('Error during login:', error);
-        res.status(500).json({ message: 'Error during login' });
-      }
-    });
-
-    // Route to get all users (optional, depending on your requirements)
-    app.get("/users", async (req: Request, res: Response) => {
-      const users = await userRepository.find();
-      res.send(users);
-    });
-
+  .then(() => {
     // Start the server after successful connection
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => {
@@ -171,9 +157,53 @@ AppDataSource.initialize()
   })
   .catch((error) => console.log("Error initializing database connection:", error));
 
-// Amadeus API and Flight Search Routes 
+// Route for user signup
+app.post('/signup', async (req: Request, res: Response) => {
+  const { name, email, password } = req.body;
+  try {
+    const userRepository = AppDataSource.getRepository(User);
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = userRepository.create({ name, email, password: hashedPassword });
+    await userRepository.save(newUser);
+    const token = jwt.sign({ userId: newUser.id }, JWT_SECRET);
+    res.json({ token });
+  } catch (error) {
+    console.error('Error during signup:', error);
+    res.status(500).json({ message: 'Error during signup' });
+  }
+});
+
+// Route for user login
+app.post('/login', async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+  try {
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOneBy({ email });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET);
+    res.json({ token });
+  } catch (error) {
+    console.error('Error during login:', error);
+    res.status(500).json({ message: 'Error during login' });
+  }
+});
+
+// Route to search for flights
 app.get('/api/flights/search', async (req: Request, res: Response) => {
-  const { origin, destination, departureDate } = req.query;
+  const { origin, destination, departureDate, returnDate } = req.query as {
+    origin?: string;
+    destination?: string;
+    departureDate?: string;
+    returnDate?: string;
+  };
 
   if (!origin || !destination || !departureDate) {
     return res.status(400).json({ error: 'Missing required query parameters: origin, destination, and departureDate' });
@@ -182,30 +212,39 @@ app.get('/api/flights/search', async (req: Request, res: Response) => {
   try {
     const accessToken = await getAccessToken();
 
-    const params = {
-      originLocationCode: origin as string,
-      destinationLocationCode: destination as string,
-      departureDate: departureDate as string,
+    // Construct the search parameters for both one-way and round-trip
+    const searchParams: any = {
+      originLocationCode: origin,
+      destinationLocationCode: destination,
+      departureDate,
       adults: 1,
     };
 
-    const response = await axios.get<FlightOffersResponse>('https://test.api.amadeus.com/v2/shopping/flight-offers', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      params,
-    });
+    if (returnDate) {
+      searchParams.returnDate = returnDate;
+    }
 
-    if (!response.data || response.data.data.length === 0) {
+    // Make a request to Amadeus API for flight offers
+    const response = await axios.get<FlightOffersResponse>(
+      'https://test.api.amadeus.com/v2/shopping/flight-offers', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        params: searchParams,
+      }
+    );
+
+    if (!response.data?.data?.length) {
       return res.status(404).json({ error: 'No flights found for the given criteria' });
     }
 
-    res.json(response.data);
+    res.json({ data: response.data.data });
   } catch (error: any) {
     console.error('Error fetching flight data:', error.response ? error.response.data : error.message);
     res.status(500).json({ error: 'Error fetching flight data' });
   }
 });
 
-// Airport suggestions route (unchanged)
+
+// Airport suggestions route
 app.get('/api/airports/suggest', async (req: Request, res: Response) => {
   const { keyword } = req.query;
 
@@ -231,25 +270,3 @@ app.get('/api/airports/suggest', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Error fetching airport suggestions' });
   }
 });
-
-// Function to get the access token from Amadeus API (unchanged)
-async function getAccessToken(): Promise<string> {
-  try {
-    const params = new URLSearchParams({
-      grant_type: 'client_credentials',
-      client_id: AMADEUS_API_KEY,
-      client_secret: AMADEUS_API_SECRET,
-    });
-
-    const response = await axios.post<{ access_token: string }>('https://test.api.amadeus.com/v1/security/oauth2/token', params.toString(), {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    });
-
-    return response.data.access_token;
-  } catch (error: any) {
-    console.error('Error fetching access token:', error.response ? error.response.data : error.message);
-    throw new Error('Unable to get access token');
-  }
-}
