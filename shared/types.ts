@@ -63,6 +63,12 @@ export interface FlightOffer {
   validatingAirlineCodes: string[];
   travelerPricings: TravelerPricing[];
 }
+
+export interface Links {
+  flightDates: string;  // URL for flight dates resource
+  flightOffers: string;  // URL for flight offers resource
+}
+
 // Define GeoCode interface for the geographical coordinates
 export interface GeoCode {
   latitude: number;
@@ -74,6 +80,8 @@ export interface SearchParams {
   origin: string;
   destination: string;
   departureDate: string;  // This can be a string or a Date object depending on how you handle dates
+  returnDate?: string;
+  tripType: 'oneway' | 'roundtrip';
 }
 
 // Define Address interface for the location's address details
@@ -129,3 +137,4 @@ export interface AirportSuggestionsResponse {
 export interface FlightOffersResponse {
   data: FlightOffer[];  // Array of flight offers
 }
+

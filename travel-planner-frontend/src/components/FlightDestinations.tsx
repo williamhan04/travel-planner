@@ -40,8 +40,14 @@ const FlightDestinations: React.FC<FlightDestinationsProps> = ({ flights }) => {
   };
 
   // Handle sort selection change
+<<<<<<< HEAD
   const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSortType(e.target.value);
+=======
+  const handleSortChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const target = e.target as HTMLSelectElement;
+    setSortType(target.value);
+>>>>>>> 3c309562c55c035f41887ad47537dd8d37c2ca19
   };
 
   return (
