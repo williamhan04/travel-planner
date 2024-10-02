@@ -9,14 +9,14 @@ import FlightDestinations from './components/FlightDestinations';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import axios from 'axios';
-import { FlightOffer, SearchParams, FlightDestination } from './../../shared/types';
+import { FlightOffer, SearchParams } from './../../shared/types';
 
 function App() {
   // State management for search parameters, flight data, loading, and error
   const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [flights, setFlights] = useState<(FlightOffer | FlightDestination)[]>([]);
+  const [flights, setFlights] = useState<(FlightOffer)[]>([]);
 
   // Function to handle search and make API call
   const handleSearch = async (params: SearchParams) => {
@@ -25,7 +25,7 @@ function App() {
       setError(null);
 
       // Make the API call to the backend to fetch flight data
-      const response = await axios.get<{ data: (FlightOffer | FlightDestination)[] }>('http://localhost:5000/api/flights/search', {
+      const response = await axios.get<{ data: (FlightOffer)[] }>('http://localhost:5000/api/flights/search', {
         params: {
           origin: params.origin,
           destination: params.destination,

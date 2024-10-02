@@ -69,16 +69,6 @@ export interface Links {
   flightOffers: string;  // URL for flight offers resource
 }
 
-export interface FlightDestination {
-  type: string;  // The type of the resource, e.g., 'flight-destination'
-  origin: string;  // Origin airport code (e.g., 'PAR')
-  destination: string;  // Destination airport code (e.g., 'DXB')
-  departureDate: string;  // Departure date in YYYY-MM-DD format
-  returnDate?: string;  // Return date in YYYY-MM-DD format (optional if it's a one-way flight)
-  price: Price;  // Price object with total price and currency
-  links: Links;  // Links to other resources related to the flight destination
-}
-
 // Define GeoCode interface for the geographical coordinates
 export interface GeoCode {
   latitude: number;
@@ -148,11 +138,3 @@ export interface FlightOffersResponse {
   data: FlightOffer[];  // Array of flight offers
 }
 
-// Define a RoundTripOffer type that includes outbound and return details
-export interface RoundTripOffer {
-  type: 'roundtrip-offer';
-  outbound: FlightOffer;
-  return?: FlightDestination | null;
-} 
-
-export type UnifiedFlight = FlightOffer | RoundTripOffer | FlightDestination;  
