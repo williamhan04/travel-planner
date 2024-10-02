@@ -137,4 +137,3 @@ export interface AirportSuggestionsResponse {
 export interface FlightOffersResponse {
   data: FlightOffer[];  // Array of flight offers
 }
-
