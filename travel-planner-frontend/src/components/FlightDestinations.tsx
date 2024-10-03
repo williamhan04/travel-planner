@@ -32,9 +32,9 @@ const FlightDestinations: React.FC<FlightDestinationsProps> = ({ flights }) => {
       <Row className="justify-content-center mt-4">
         <Col md={4} className="text-center">
           <Form.Group>
-            <Form.Label className="text-lg font-semibold">Sort Flights By:</Form.Label>
+            <Form.Label className="text-xl font-semibold text-blue-700">Sort Flights By:</Form.Label>
             <select
-              className="form-control mt-2 p-2 rounded-lg border-gray-300"
+              className="form-control mt-2 p-2 rounded-lg border-gray-300 shadow-md transition duration-300 ease-in-out focus:border-blue-500"
               value={sortType}
               onChange={(e) => setSortType(e.target.value)}
             >
@@ -46,7 +46,7 @@ const FlightDestinations: React.FC<FlightDestinationsProps> = ({ flights }) => {
       </Row>
 
       {currentFlights.length > 0 ? (
-        <Row className="justify-content-center mt-8">
+        <Row className="justify-content-center mt-8 gap-8">
           {currentFlights.map((flight) => {
             const uniqueKey = flight.id || uuidv4();
             const itinerary = flight.itineraries[0];
@@ -55,18 +55,18 @@ const FlightDestinations: React.FC<FlightDestinationsProps> = ({ flights }) => {
 
             return (
               <Col key={uniqueKey} md={4} className="mb-6">
-                <Card className="bg-white rounded-xl overflow-hidden shadow-lg transition-shadow duration-300 hover:shadow-xl">
-                  <Card.Body className="p-6">
-                    <Card.Title className="text-xl font-bold text-blue-600">
+                <Card className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl overflow-hidden shadow-2xl transition-transform duration-500 hover:shadow-3xl hover:scale-105">
+                  <Card.Body className="p-8 text-black">
+                    <Card.Title className="text-3xl font-bold text-center">
                       {departure?.iataCode} → {arrival?.iataCode}
                     </Card.Title>
-                    <Card.Text className="mt-4 text-gray-700">
+                    <Card.Text className="mt-6 text-lg text-center">
                       <strong>Price:</strong> {flight.price.total} {flight.price.currency}<br />
                       <strong>Departure:</strong> {departure?.at ? new Date(departure.at).toLocaleString() : 'N/A'}<br />
                       <strong>Arrival:</strong> {arrival?.at ? new Date(arrival.at).toLocaleString() : 'N/A'}
                     </Card.Text>
                     <Button
-                      className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 mt-4"
+                      className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-3 px-6 rounded-full mt-6 shadow-lg transition-transform duration-300 transform hover:scale-105 block mx-auto"
                       onClick={() => {
                         setSelectedFlight(flight);
                         setShowModal(true);
@@ -81,15 +81,15 @@ const FlightDestinations: React.FC<FlightDestinationsProps> = ({ flights }) => {
           })}
         </Row>
       ) : (
-        <p className="text-center text-lg text-gray-600 mt-8">No flights available.</p>
+        <p className="text-center text-2xl text-gray-600 mt-12">No flights available.</p>
       )}
 
       {totalPages > 1 && (
-        <Pagination className="justify-content-center mt-6">
+        <Pagination className="justify-content-center mt-8 gap-3">
           {[...Array(totalPages)].map((_, i) => (
             <Pagination.Item
               key={`page-${i + 1}`}
-              className="px-4 py-2 rounded-lg"
+              className={`px-5 py-3 rounded-lg transition-all duration-300 ${i + 1 === currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-blue-400 hover:text-white'}`}
               active={i + 1 === currentPage}
               onClick={() => setCurrentPage(i + 1)}
             >
